@@ -1,4 +1,11 @@
 import axios from 'axios';
+import * as mock from './mockClient';
+
+/**
+ * Toggle for using mocks. Default to true when API base is not set.
+ */
+const USE_MOCKS = String(process.env.REACT_APP_USE_MOCKS || '').toLowerCase() === 'true'
+  || !(process.env.REACT_APP_API_BASE || process.env.REACT_APP_BACKEND_URL);
 
 /**
  * Normalize and validate base URL and health path from env.
@@ -48,17 +55,19 @@ function normalizeBaseUrl(input) {
   return b;
 }
 
-export const API_BASE = normalizeBaseUrl(rawBase);
+export const API_BASE = USE_MOCKS ? mock.API_BASE : normalizeBaseUrl(rawBase);
 
 /**
  * Resolve health check path:
  * - If REACT_APP_HEALTHCHECK_PATH starts with 'http', use as absolute URL.
  * - Else, treat as a path relative to API_BASE (default '/health').
+ * In mock mode, ignore env and return mock pseudo URL.
  */
 const rawHealthPath = process.env.REACT_APP_HEALTHCHECK_PATH || '/health';
 
 // PUBLIC_INTERFACE
 export function getHealthUrl() {
+  if (USE_MOCKS) return mock.getHealthUrl();
   if (/^https?:\/\//i.test(rawHealthPath)) {
     return rawHealthPath;
   }
@@ -72,9 +81,10 @@ export function getHealthUrl() {
  * - baseURL: API_BASE
  * - timeout: 10s
  * Adds a request interceptor to log diagnostics in development.
+ * In mock mode, this client won't be used for mocked endpoints.
  */
 const client = axios.create({
-  baseURL: API_BASE,
+  baseURL: USE_MOCKS ? undefined : API_BASE,
   timeout: 10000,
   withCredentials: false,
 });
@@ -83,7 +93,7 @@ const client = axios.create({
 (function logApiDiagnostics() {
   try {
     // eslint-disable-next-line no-console
-    console.log('[API] baseURL:', API_BASE, 'healthPath:', rawHealthPath, 'healthURL:', getHealthUrl());
+    console.log('[API] mode:', USE_MOCKS ? 'MOCK' : 'REAL', 'baseURL:', API_BASE, 'healthPath:', rawHealthPath, 'healthURL:', getHealthUrl());
   } catch (e) {
     // ignore
   }
@@ -102,8 +112,12 @@ client.interceptors.request.use((config) => {
 
 /**
  * Try GET /openapi.json to verify connectivity when health path fails.
+ * Skipped in mock mode.
  */
 async function tryOpenApiConnectivity() {
+  if (USE_MOCKS) {
+    return { ok: true, urlTried: 'mock://api/openapi.json', data: { mock: true } };
+  }
   const openapiUrl = `${API_BASE.replace(/\/+$/, '')}/openapi.json`;
   try {
     const res = await axios.get(openapiUrl, { timeout: 8000, withCredentials: false });
@@ -120,9 +134,12 @@ async function tryOpenApiConnectivity() {
 
 /**
  * PUBLIC_INTERFACE
- * health: GET health endpoint using configured path, with diagnostics & fallback to /openapi.json.
+ * health: return mock health when USE_MOCKS; otherwise call backend.
  */
 export async function health() {
+  if (USE_MOCKS) {
+    return mock.getHealth();
+  }
   const url = getHealthUrl();
   try {
     if (/^https?:\/\//i.test(url)) {
@@ -153,18 +170,24 @@ export async function health() {
 
 /**
  * PUBLIC_INTERFACE
- * listCustomers: GET /customers
+ * listCustomers: mocked or real GET /customers
  */
 export async function listCustomers() {
+  if (USE_MOCKS) {
+    return mock.listCustomers();
+  }
   const res = await client.get('/customers', { withCredentials: false });
   return res.data;
 }
 
 /**
  * PUBLIC_INTERFACE
- * getCustomer: GET /customers/:id
+ * getCustomer: mocked or real GET /customers/:id
  */
 export async function getCustomer(id) {
+  if (USE_MOCKS) {
+    return mock.getCustomer(id);
+  }
   const res = await client.get(`/customers/${id}`, { withCredentials: false });
   return res.data;
 }
