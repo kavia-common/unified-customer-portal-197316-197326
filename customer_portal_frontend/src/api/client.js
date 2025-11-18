@@ -8,17 +8,44 @@ import axios from 'axios';
 const rawBase = process.env.REACT_APP_API_BASE || process.env.REACT_APP_BACKEND_URL;
 const FALLBACK_BASE = 'http://localhost:3001/api/v1';
 
-// Ensure base has protocol and remove trailing slash
+// Ensure base has protocol and remove trailing slash.
+// Additionally, if the app is served over HTTPS, avoid mixed content by upgrading
+// http://localhost:* to https://<current-host>:<port> when possible.
 function normalizeBaseUrl(input) {
   let b = (input || '').trim();
-  if (!/^https?:\/\//i.test(b)) {
-    // If base missing protocol but defined, assume http
-    if (b.length > 0) {
-      b = `http://${b}`;
-    }
+
+  // Fill protocol if missing
+  if (b && !/^https?:\/\//i.test(b)) {
+    b = `http://${b}`;
   }
-  if (!b) return FALLBACK_BASE;
-  return b.replace(/\/+$/, '');
+
+  // Default if still empty
+  if (!b) {
+    b = FALLBACK_BASE;
+  }
+
+  // Trim trailing slashes
+  b = b.replace(/\/+$/, '');
+
+  // Mixed-content guard: if page is https and base is http to localhost,
+  // try to align with current location host using https, but preserve path (/api/v1).
+  try {
+    const loc = typeof window !== 'undefined' ? window.location : null;
+    if (loc && loc.protocol === 'https:' && /^http:\/\/localhost(?::\d+)?\//i.test(b)) {
+      const url = new URL(b);
+      // Use current host for backend if ports match known dev ports (3000 frontend, 3001 backend)
+      // We keep port 3001 for backend.
+      const apiPath = url.pathname || '/api/v1';
+      const newBase = `https://${loc.hostname}:3001${apiPath}`;
+      // eslint-disable-next-line no-console
+      console.warn('[API] Upgrading base URL to avoid mixed content:', newBase);
+      b = newBase.replace(/\/+$/, '');
+    }
+  } catch {
+    // ignore
+  }
+
+  return b;
 }
 
 export const API_BASE = normalizeBaseUrl(rawBase);
