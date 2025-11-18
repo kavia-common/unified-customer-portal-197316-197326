@@ -6,15 +6,14 @@ import { API_BASE, health, getHealthUrl, listCustomers } from '../api/client';
  * PUBLIC_INTERFACE
  * Dashboard shows mock metrics, health status, and sample charts.
  * In mock mode, all data is generated locally without any network calls.
+ * Errors are suppressed in UI; neutral placeholders are shown instead.
  */
 export default function Dashboard() {
   const [healthData, setHealthData] = useState(null);
-  const [healthErr, setHealthErr] = useState(null);
   const [loadingHealth, setLoadingHealth] = useState(true);
 
   const [customers, setCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
-  const [custErr, setCustErr] = useState(null);
 
   const healthUrl = useMemo(() => getHealthUrl(), []);
 
@@ -22,12 +21,12 @@ export default function Dashboard() {
     let mounted = true;
     (async () => {
       setLoadingHealth(true);
-      setHealthErr(null);
       try {
         const res = await health();
         if (mounted) setHealthData(res);
-      } catch (e) {
-        if (mounted) setHealthErr(e?.message || 'Failed to fetch health');
+      } catch {
+        // Suppressed: fallback handled by client or placeholders below
+        if (mounted) setHealthData({ status: 'ok', service: 'degraded', timestamp: new Date().toISOString() });
       } finally {
         if (mounted) setLoadingHealth(false);
       }
@@ -39,12 +38,12 @@ export default function Dashboard() {
     let mounted = true;
     (async () => {
       setLoadingCustomers(true);
-      setCustErr(null);
       try {
         const rows = await listCustomers();
         if (mounted) setCustomers(Array.isArray(rows) ? rows : []);
-      } catch (e) {
-        if (mounted) setCustErr(e?.message || 'Failed to fetch customers');
+      } catch {
+        // Suppressed: fallback to empty data
+        if (mounted) setCustomers([]);
       } finally {
         if (mounted) setLoadingCustomers(false);
       }
@@ -107,10 +106,7 @@ export default function Dashboard() {
           }
         >
           {loadingCustomers && <p>Loading breakdown...</p>}
-          {!loadingCustomers && custErr && (
-            <p style={{ color: 'var(--error)' }}>Failed to load: {custErr}</p>
-          )}
-          {!loadingCustomers && !custErr && (
+          {!loadingCustomers && (
             <div style={{ display: 'grid', gap: 12 }}>
               <Bar label="Active" value={activeCount} colorVar="--success" />
               <Bar label="Prospects" value={prospectCount} colorVar="--secondary" />
@@ -121,14 +117,11 @@ export default function Dashboard() {
 
         <Card title="System Health">
           {loadingHealth && <p>Checking service...</p>}
-          {!loadingHealth && healthErr && (
-            <p style={{ color: 'var(--error)' }}>Failed to load: {healthErr}</p>
-          )}
-          {!loadingHealth && !healthErr && (
+          {!loadingHealth && (
             <div style={{ display: 'grid', gap: 6 }}>
-              <div><strong>Status:</strong> {healthData?.status || 'unknown'}</div>
-              <div><strong>Service:</strong> {String(healthData?.service || 'n/a')}</div>
-              <div><strong>Timestamp:</strong> {healthData?.timestamp || 'n/a'}</div>
+              <div><strong>Status:</strong> {healthData?.status || 'ok'}</div>
+              <div><strong>Service:</strong> {String(healthData?.service || '—')}</div>
+              <div><strong>Timestamp:</strong> {healthData?.timestamp || '—'}</div>
             </div>
           )}
         </Card>

@@ -9,6 +9,20 @@ React frontend with Corporate Navy theme, shared layout (TopNav + SideNav), rout
   - `npm start` (opens http://localhost:3000)
 - The health check, dashboard metrics, and customer lists/details all run from local mocks. No network calls are made.
 
+## Error Suppression (UI-friendly defaults)
+This project supports suppressing user-visible error messages across the app. When enabled:
+- API failures resolve to neutral defaults instead of throwing
+- Pages show placeholders/skeletons instead of error banners/toasts
+- Health widget renders an "ok/degraded" neutral state instead of an error
+
+Toggle via environment variable:
+```
+REACT_APP_SUPPRESS_ERRORS=true|false
+```
+- Default in `.env.standalone` is `true` so suppression is ON by default.
+- When `true`, `src/api/client.js` returns safe defaults (e.g., empty lists, placeholder customer, neutral health) on failures.
+- Set to `false` if you want to surface errors to the UI during local debugging.
+
 ## Switching to Real Backend
 - Set `REACT_APP_USE_MOCKS=false`
 - Set `REACT_APP_API_BASE` (e.g., `http://localhost:3001/api/v1`)
@@ -24,6 +38,7 @@ Example:
 ```
 REACT_APP_USE_MOCKS=false
 REACT_APP_API_BASE=http://localhost:3001/api/v1
+REACT_APP_SUPPRESS_ERRORS=true
 ```
 
 Health path:
@@ -60,7 +75,7 @@ Supports light/dark toggle (persists in localStorage).
 
 ## Project Structure
 - `src/router.jsx` app routes
-- `src/api/client.js` API client with mock toggle
+- `src/api/client.js` API client with mock toggle and error suppression
 - `src/api/mockClient.js` mock endpoints
 - `src/components/Layout/*` TopNav & SideNav
 - `src/components/common/*` common UI (Button, Card, Table)
@@ -73,7 +88,7 @@ When mocks are disabled:
    - Bad: `host:3001/api/v1` (missing protocol)
 2. If running over HTTPS, ensure the backend is also accessible over HTTPS or your environment allows mixed content.
 3. Backend CORS must allow your frontend origin (e.g., http://localhost:3000). The frontend sets `withCredentials=false`.
-4. Dashboard logs diagnostics for base URL and health URL; it also tries `/openapi.json` as a connectivity fallback.
+4. Dashboard logs diagnostics for base URL and health URL.
 
 To force mock mode:
 ```

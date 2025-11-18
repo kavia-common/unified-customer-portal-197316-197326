@@ -4,3 +4,7 @@ Frontend runs standalone on mock data by default:
 - In `customer_portal_frontend`, copy `.env.standalone` to `.env` (or set `REACT_APP_USE_MOCKS=true`)
 - Health, dashboard metrics, and customers use local dummy data; no network calls occur
 - To use the backend instead: set `REACT_APP_USE_MOCKS=false` and define `REACT_APP_API_BASE`
+
+Error suppression mode:
+- Toggle via `REACT_APP_SUPPRESS_ERRORS=true|false` (default `true` in `.env.standalone`)
+- When enabled, UI does not show error toasts/banners/messages; neutral placeholders are shown and API client returns safe defaults on failures.

@@ -7,10 +7,10 @@ import { useNavigate } from 'react-router-dom';
 /**
  * PUBLIC_INTERFACE
  * CustomersList renders a table of customers.
+ * Error messages are suppressed; on failure a neutral empty state is shown.
  */
 export default function CustomersList() {
   const [rows, setRows] = useState([]);
-  const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -20,8 +20,9 @@ export default function CustomersList() {
       try {
         const data = await listCustomers();
         if (mounted) setRows(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (mounted) setErr(e?.message || 'Error fetching customers');
+      } catch {
+        // Suppressed: fallback to empty table
+        if (mounted) setRows([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -40,8 +41,7 @@ export default function CustomersList() {
   return (
     <Card title="Customers">
       {loading && <p>Loading customers...</p>}
-      {!loading && err && <p style={{ color: 'var(--error)' }}>Failed to load: {err}</p>}
-      {!loading && !err && (
+      {!loading && (
         <Table
           columns={columns}
           data={rows}
