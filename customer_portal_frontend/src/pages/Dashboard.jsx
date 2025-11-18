@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Card from '../components/common/Card';
-import { API_BASE, health } from '../api/client';
+import { API_BASE, health, getHealthUrl } from '../api/client';
 
 /**
  * PUBLIC_INTERFACE
@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [status, setStatus] = useState(null);
   const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(true);
+  const healthUrl = getHealthUrl();
 
   useEffect(() => {
     let mounted = true;
@@ -28,7 +29,14 @@ export default function Dashboard() {
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
-      <Card title="System Health" actions={<small style={{ color: 'var(--muted)' }}>{API_BASE}</small>}>
+      <Card
+        title="System Health"
+        actions={
+          <small style={{ color: 'var(--muted)' }}>
+            {API_BASE} · {healthUrl}
+          </small>
+        }
+      >
         {loading && <p>Checking service...</p>}
         {!loading && err && (
           <p style={{ color: 'var(--error)' }}>Failed to load health: {err}</p>
