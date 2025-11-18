@@ -135,9 +135,11 @@ async function tryOpenApiConnectivity() {
 /**
  * PUBLIC_INTERFACE
  * health: return mock health when USE_MOCKS; otherwise call backend.
+ * When USE_MOCKS is true this function MUST NOT perform any network calls.
  */
 export async function health() {
   if (USE_MOCKS) {
+    // Guaranteed to be local-only; never reaches the network.
     return mock.getHealth();
   }
   const url = getHealthUrl();

@@ -2,34 +2,23 @@
 
 React frontend with Corporate Navy theme, shared layout (TopNav + SideNav), routing, and API client.
 
-## Quick Start
+## Quick Start (Standalone by default)
 - Install deps: `npm install`
-- Run with mocks (no backend needed):
-  - Copy `.env.mock` to `.env` (or set `REACT_APP_USE_MOCKS=true`)
-  - `npm start` (http://localhost:3000)
-- Run with real backend:
-  - Set `REACT_APP_USE_MOCKS=false`
-  - Set `REACT_APP_API_BASE` (e.g., `http://localhost:3001/api/v1`)
-  - Optionally set `REACT_APP_HEALTHCHECK_PATH=/health`
-  - `npm start`
+- Run fully standalone on mock data (no backend needed):
+  - Copy `.env.standalone` to `.env` (or set `REACT_APP_USE_MOCKS=true`)
+  - `npm start` (opens http://localhost:3000)
+- The health check, dashboard metrics, and customer lists/details all run from local mocks. No network calls are made.
 
-## Routing
-- `/` Dashboard (reads health via API client; mocked when enabled)
-- `/customers` Customers list (reads via API client; mocked when enabled)
-- `/customers/:id` Customer detail (reads via API client; mocked when enabled)
-- `/profile` Profile
-- Unknown routes → 404 page
+## Switching to Real Backend
+- Set `REACT_APP_USE_MOCKS=false`
+- Set `REACT_APP_API_BASE` (e.g., `http://localhost:3001/api/v1`)
+- Optional: `REACT_APP_HEALTHCHECK_PATH` (default: `/health`, or use absolute URL)
+- `npm start`
 
-## API Configuration and Mock Mode
-This app can operate fully offline using a mock API:
-- Toggle with `REACT_APP_USE_MOCKS=true|false`
-- If `REACT_APP_API_BASE` is not set, mock mode defaults to ON automatically
-- In mock mode, health and customer endpoints return deterministic dummy data and no network calls are made
-
-When using the real backend, base URL resolution order:
+Base URL resolution order when mocks are OFF:
 - `REACT_APP_API_BASE` (preferred)
-- Fallback: `REACT_APP_BACKEND_URL`
-If neither is set (and mocks are disabled), defaults to `http://localhost:3001/api/v1`.
+- fallback: `REACT_APP_BACKEND_URL`
+If neither is set, defaults to `http://localhost:3001/api/v1`.
 
 Example:
 ```
@@ -44,6 +33,20 @@ REACT_APP_HEALTHCHECK_PATH=https://your-host:3001/api/v1/health
 # or relative to API base (default: /health)
 REACT_APP_HEALTHCHECK_PATH=/health
 ```
+
+When mocks are ON, any backend URL variables are ignored and the app never calls the network for health or data.
+
+## Routing
+- `/` Dashboard (mock metrics/cards/charts + health, mocked when enabled)
+- `/customers` Customers list (reads via API client; mocked when enabled)
+- `/customers/:id` Customer detail (reads via API client; mocked when enabled)
+- `/profile` Profile
+- Unknown routes → 404 page
+
+## API Configuration and Mock Mode
+- Toggle with `REACT_APP_USE_MOCKS=true|false`
+- If `REACT_APP_API_BASE` is not set, mock mode defaults to ON automatically
+- In mock mode, health and customer endpoints use deterministic dummy data and never hit the network
 
 ## Theme
 Corporate Navy color palette is implemented with CSS variables in `src/App.css`:
@@ -64,16 +67,15 @@ Supports light/dark toggle (persists in localStorage).
 - `src/pages/*` pages
 
 ## Network Error / CORS Troubleshooting
-When mocks are disabled, the Dashboard performs a health check using `REACT_APP_API_BASE` and `REACT_APP_HEALTHCHECK_PATH`. If you see "Network Error":
+When mocks are disabled:
 1. Ensure `REACT_APP_API_BASE` includes protocol and port and no trailing slash.
    - Good: `https://host:3001/api/v1`
-   - Bad: `host:3001/api/v1` (missing protocol), `https://host:3001/api/v1/` (trailing slash ok, but will be normalized)
+   - Bad: `host:3001/api/v1` (missing protocol)
 2. If running over HTTPS, ensure the backend is also accessible over HTTPS or your environment allows mixed content.
 3. Backend CORS must allow your frontend origin (e.g., http://localhost:3000). The frontend sets `withCredentials=false`.
-4. Use the diagnostics shown on the Dashboard: it logs effective base URL, health URL, and tries fetching `/openapi.json` as a connectivity fallback.
-5. You can click the "Open API Docs JSON" link to verify reachability, or enable mocks to bypass the backend.
+4. Dashboard logs diagnostics for base URL and health URL; it also tries `/openapi.json` as a connectivity fallback.
 
-You can copy `.env.mock` to `.env` to force mock mode:
+To force mock mode:
 ```
 REACT_APP_USE_MOCKS=true
 ```
