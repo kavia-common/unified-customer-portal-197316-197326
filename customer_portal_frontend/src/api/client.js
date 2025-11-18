@@ -1,12 +1,27 @@
 import axios from 'axios';
 
 /**
- * Resolve API base URL:
+ * Normalize and validate base URL and health path from env.
  * Priority: REACT_APP_API_BASE -> REACT_APP_BACKEND_URL -> default 'http://localhost:3001/api/v1'
+ * Ensures protocol+host+optional port are included and trailing slashes are trimmed to avoid // issues.
  */
-const envBase = process.env.REACT_APP_API_BASE || process.env.REACT_APP_BACKEND_URL;
-export const API_BASE =
-  envBase && envBase.trim().length > 0 ? envBase : 'http://localhost:3001/api/v1';
+const rawBase = process.env.REACT_APP_API_BASE || process.env.REACT_APP_BACKEND_URL;
+const FALLBACK_BASE = 'http://localhost:3001/api/v1';
+
+// Ensure base has protocol and remove trailing slash
+function normalizeBaseUrl(input) {
+  let b = (input || '').trim();
+  if (!/^https?:\/\//i.test(b)) {
+    // If base missing protocol but defined, assume http
+    if (b.length > 0) {
+      b = `http://${b}`;
+    }
+  }
+  if (!b) return FALLBACK_BASE;
+  return b.replace(/\/+$/, '');
+}
+
+export const API_BASE = normalizeBaseUrl(rawBase);
 
 /**
  * Resolve health check path:
@@ -15,38 +30,98 @@ export const API_BASE =
  */
 const rawHealthPath = process.env.REACT_APP_HEALTHCHECK_PATH || '/health';
 
-/**
- * PUBLIC_INTERFACE
- * getHealthUrl: returns the effective URL used for the health request, for diagnostics.
- */
+// PUBLIC_INTERFACE
 export function getHealthUrl() {
   if (/^https?:\/\//i.test(rawHealthPath)) {
     return rawHealthPath;
   }
-  // ensure no double slashes when joining
-  const base = API_BASE.replace(/\/+$/, '');
   const path = rawHealthPath.startsWith('/') ? rawHealthPath : `/${rawHealthPath}`;
-  return `${base}${path}`;
+  return `${API_BASE}${path}`;
 }
 
+/**
+ * Create axios client with safe defaults for CORS.
+ * - withCredentials: false to avoid cookie-based CORS failures
+ * - baseURL: API_BASE
+ * - timeout: 10s
+ * Adds a request interceptor to log diagnostics in development.
+ */
 const client = axios.create({
   baseURL: API_BASE,
   timeout: 10000,
+  withCredentials: false,
+});
+
+// Diagnostics logging
+(function logApiDiagnostics() {
+  try {
+    // eslint-disable-next-line no-console
+    console.log('[API] baseURL:', API_BASE, 'healthPath:', rawHealthPath, 'healthURL:', getHealthUrl());
+  } catch (e) {
+    // ignore
+  }
+})();
+
+client.interceptors.request.use((config) => {
+  // eslint-disable-next-line no-console
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug('[API] Request:', {
+      method: config.method,
+      url: config.baseURL ? `${config.baseURL}${config.url}` : config.url,
+    });
+  }
+  return config;
 });
 
 /**
+ * Try GET /openapi.json to verify connectivity when health path fails.
+ */
+async function tryOpenApiConnectivity() {
+  const openapiUrl = `${API_BASE.replace(/\/+$/, '')}/openapi.json`;
+  try {
+    const res = await axios.get(openapiUrl, { timeout: 8000, withCredentials: false });
+    return { ok: true, urlTried: openapiUrl, data: res.data };
+  } catch (e) {
+    return {
+      ok: false,
+      urlTried: openapiUrl,
+      error: e?.message || 'Failed to fetch openapi.json',
+      code: e?.code,
+    };
+  }
+}
+
+/**
  * PUBLIC_INTERFACE
- * health: GET health endpoint using configured path
+ * health: GET health endpoint using configured path, with diagnostics & fallback to /openapi.json.
  */
 export async function health() {
   const url = getHealthUrl();
-  // If absolute URL, use axios.get directly; else use client with relative path
-  if (/^https?:\/\//i.test(url)) {
-    const res = await axios.get(url, { timeout: 10000 });
+  try {
+    if (/^https?:\/\//i.test(url)) {
+      const res = await axios.get(url, { timeout: 10000, withCredentials: false });
+      return res.data;
+    }
+    // strip base if accidentally included and ensure relative path
+    const relative = url.startsWith(API_BASE) ? url.slice(API_BASE.length) || '/' : url;
+    const res = await client.get(relative, { withCredentials: false });
     return res.data;
+  } catch (err) {
+    // Build detailed diagnostics and attempt fallback to /openapi.json
+    const diag = {
+      message: err?.message || 'Network error',
+      code: err?.code,
+      name: err?.name,
+      isAxiosError: !!err?.isAxiosError,
+      requestedUrl: url,
+      apiBase: API_BASE,
+    };
+    const fallback = await tryOpenApiConnectivity();
+    throw Object.assign(new Error('Health check failed'), {
+      diagnostics: diag,
+      fallback,
+    });
   }
-  const res = await client.get(url.replace(API_BASE, '')); // strip base if accidentally included
-  return res.data;
 }
 
 /**
@@ -54,7 +129,7 @@ export async function health() {
  * listCustomers: GET /customers
  */
 export async function listCustomers() {
-  const res = await client.get('/customers');
+  const res = await client.get('/customers', { withCredentials: false });
   return res.data;
 }
 
@@ -63,7 +138,7 @@ export async function listCustomers() {
  * getCustomer: GET /customers/:id
  */
 export async function getCustomer(id) {
-  const res = await client.get(`/customers/${id}`);
+  const res = await client.get(`/customers/${id}`, { withCredentials: false });
   return res.data;
 }
 

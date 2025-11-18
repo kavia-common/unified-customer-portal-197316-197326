@@ -25,6 +25,14 @@ Example:
 REACT_APP_API_BASE=http://localhost:3001/api/v1
 ```
 
+Health path:
+```
+# absolute URL allowed (used as-is)
+REACT_APP_HEALTHCHECK_PATH=https://your-host:3001/api/v1/health
+# or relative to API base (default: /health)
+REACT_APP_HEALTHCHECK_PATH=/health
+```
+
 ## Theme
 Corporate Navy color palette is implemented with CSS variables in `src/App.css`:
 - primary: #1E3A8A
@@ -41,6 +49,23 @@ Supports light/dark toggle (persists in localStorage).
 - `src/components/Layout/*` TopNav & SideNav
 - `src/components/common/*` common UI (Button, Card, Table)
 - `src/pages/*` pages
+
+## Network Error / CORS Troubleshooting
+The Dashboard performs a health check using `REACT_APP_API_BASE` and `REACT_APP_HEALTHCHECK_PATH`. If you see "Network Error":
+1. Ensure `REACT_APP_API_BASE` includes protocol and port and no trailing slash.
+   - Good: `https://host:3001/api/v1`
+   - Bad: `host:3001/api/v1` (missing protocol), `https://host:3001/api/v1/` (trailing slash ok, but will be normalized)
+2. If running over HTTPS, ensure the backend is also accessible over HTTPS or your environment allows mixed content.
+3. Backend CORS must allow your frontend origin (e.g., http://localhost:3000). The frontend sets `withCredentials=false`.
+4. Use the diagnostics shown on the Dashboard: it logs effective base URL, health URL, and tries fetching `/openapi.json` as a connectivity fallback.
+5. You can click the "Open API Docs JSON" link to verify reachability.
+
+Copy `.env.example` to `.env` and adjust:
+```
+REACT_APP_API_BASE=http://localhost:3001/api/v1
+REACT_APP_HEALTHCHECK_PATH=/health
+REACT_APP_FRONTEND_URL=http://localhost:3000
+```
 
 ## Notes
 - No UI framework; all styles are lightweight CSS.
