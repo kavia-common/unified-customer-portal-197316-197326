@@ -1,82 +1,47 @@
-# Lightweight React Template for KAVIA
+# Unified Customer Portal - Frontend
 
-This project provides a minimal React template with a clean, modern UI and minimal dependencies.
+React frontend with Corporate Navy theme, shared layout (TopNav + SideNav), routing, and API client.
 
-## Features
+## Quick Start
+- Install deps: `npm install`
+- Set backend URL: copy `.env.example` to `.env` and adjust values
+- Run: `npm start` (http://localhost:3000)
 
-- **Lightweight**: No heavy UI frameworks - uses only vanilla CSS and React
-- **Modern UI**: Clean, responsive design with KAVIA brand styling
-- **Fast**: Minimal dependencies for quick loading times
-- **Simple**: Easy to understand and modify
+## Routing
+- `/` Dashboard (fetches `GET /api/v1/health`)
+- `/customers` Customers list (fetches `GET /api/v1/customers`)
+- `/customers/:id` Customer detail (fetches `GET /api/v1/customers/:id`)
+- `/profile` Profile
+- Unknown routes → 404 page
 
-## Getting Started
+## API Configuration
+This app reads the base URL from environment variables:
+- `REACT_APP_API_BASE` (preferred)
+- Fallback: `REACT_APP_BACKEND_URL`
+If neither is set, defaults to `http://localhost:3001/api/v1`.
 
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-### `npm test`
-
-Launches the test runner in interactive watch mode.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-## Customization
-
-### Colors
-
-The main brand colors are defined as CSS variables in `src/App.css`:
-
-```css
-:root {
-  --kavia-orange: #E87A41;
-  --kavia-dark: #1A1A1A;
-  --text-color: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --border-color: rgba(255, 255, 255, 0.1);
-}
+Example:
+```
+REACT_APP_API_BASE=http://localhost:3001/api/v1
 ```
 
-### Components
+## Theme
+Corporate Navy color palette is implemented with CSS variables in `src/App.css`:
+- primary: #1E3A8A
+- secondary: #F59E0B
+- background: #F3F4F6
+- surface: #FFFFFF
+- text: #111827
 
-This template uses pure HTML/CSS components instead of a UI framework. You can find component styles in `src/App.css`. 
+Supports light/dark toggle (persists in localStorage).
 
-Common components include:
-- Buttons (`.btn`, `.btn-large`)
-- Container (`.container`)
-- Navigation (`.navbar`)
-- Typography (`.title`, `.subtitle`, `.description`)
+## Project Structure
+- `src/router.jsx` app routes
+- `src/api/client.js` API client (axios)
+- `src/components/Layout/*` TopNav & SideNav
+- `src/components/common/*` common UI (Button, Card, Table)
+- `src/pages/*` pages
 
-## Learn More
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Notes
+- No UI framework; all styles are lightweight CSS.
+- Uses `react-router-dom@6` and `axios`.
